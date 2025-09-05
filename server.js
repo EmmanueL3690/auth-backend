@@ -174,6 +174,15 @@ app.post("/reset-password/:token", async (req, res) => {
     res.status(400).json({ error: "Invalid or expired token." });
   }
 });
+// Health check route
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Backend is running 🚀",
+    timestamp: new Date(),
+  });
+});
+
 
 // ===================== START SERVER =====================
 const PORT = process.env.PORT || 5000;
