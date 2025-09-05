@@ -139,7 +139,9 @@ app.post("/forgot-password", async (req, res) => {
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const resetToken = jwt.sign({ email: user.email }, SECRET, { expiresIn: "15m" });
-  const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+const resetLink = `https://sacred-geomancy-solutions.vercel.app/reset-password/${resetToken}`;
+
+
 
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
@@ -183,6 +185,11 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// For local dev
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`✅ Auth server running on http://localhost:${PORT}`));
+}
 
-// ===================== EXPORT FOR VERCEL =====================
+// For Vercel
 export default app;
