@@ -22,6 +22,17 @@ mongoose
   .then(() => console.log("✅ MongoDB Atlas connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
+  // ===================== TEMP: Check Environment Variables =====================
+app.get("/api/check-env", (req, res) => {
+  res.json({
+    mongoUri: process.env.MONGO_URI ? "✅ OK" : "❌ Missing",
+    jwtSecret: process.env.JWT_SECRET ? "✅ OK" : "❌ Missing",
+    emailUser: process.env.EMAIL_USER ? "✅ OK" : "❌ Missing",
+    emailPass: process.env.EMAIL_PASS ? "✅ OK" : "❌ Missing",
+    port: process.env.PORT || "❌ Missing",
+  });
+});
+
 // ===================== ADMIN USER =====================
 const adminUser = {
   email: "geomancysolutions@gmail.com",
