@@ -184,6 +184,5 @@ app.get("/api/health", (req, res) => {
 });
 
 
-// ===================== START SERVER =====================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Auth server running on http://localhost:${PORT}`));
+// ===================== EXPORT FOR VERCEL =====================
+export default app;
