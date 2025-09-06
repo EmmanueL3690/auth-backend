@@ -552,4 +552,14 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// ✅ Root API route
+app.get("/api", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Backend is running 🚀",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+
 export default app;
