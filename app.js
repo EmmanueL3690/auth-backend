@@ -391,13 +391,7 @@ mongoose
   .then(() => console.log("✅ MongoDB Atlas connected"))
   .catch((err) => console.error("❌ MongoDB error:", err));
 
-// ===================== ADMIN USER =====================
-const adminUser = {
-  email: "geomancysolutions@gmail.com",
-  fullname: "Admin User",
-  role: "admin",
-  password: "$2b$10$JQWKGJmWuAr5NTtd1lz8ueqkvLXUvs3d6.3HnPkxJPz9fCrrTQ6mi", // hash of 'admin123'
-};
+
 
 // ===================== EMAIL TRANSPORTER =====================
 const transporter = nodemailer.createTransport({
@@ -410,27 +404,44 @@ const transporter = nodemailer.createTransport({
 
 // ===================== AUTH ROUTES =====================
 
+// ===================== ADMIN USER =====================
+const adminUser = {
+  email: "geomancysolutions@gmail.com",
+  fullname: "Admin User",
+  role: "admin",
+  password: "$2b$10$JQWKGJmWuAr5NTtd1lz8ueqkvLXUvs3d6.3HnPkxJPz9fCrrTQ6mi", // hash of 'admin123'
+};
+
 // ---------- LOGIN ----------
 app.post("/api/login", async (req, res) => {
-  const { email, password, rememberMe } = req.body;
+  const { fullname, email, password, rememberMe } = req.body;
+
+  if (!fullname || !email || !password) {
+    return res.status(400).json({ error: "Please fill in all fields." });
+  }
 
   let user;
+
+  // Admin login
   if (email === adminUser.email) {
-    user = adminUser;
+    user = { ...adminUser, fullname };
   } else {
+    // Regular user
     try {
       user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password." });
+      }
+
+      if (user.lockUntil && user.lockUntil > Date.now()) {
+        return res.status(403).json({
+          error: `Account locked. Try again in ${Math.ceil(
+            (user.lockUntil - Date.now()) / 60000
+          )} min.`,
+        });
+      }
     } catch (err) {
       return res.status(500).json({ error: "Database error." });
-    }
-    if (!user) return res.status(401).json({ error: "Invalid email or password." });
-
-    if (user.lockUntil && user.lockUntil > Date.now()) {
-      return res.status(403).json({
-        error: `Account locked. Try again in ${Math.ceil(
-          (user.lockUntil - Date.now()) / 60000
-        )} min.`,
-      });
     }
   }
 
@@ -452,15 +463,18 @@ app.post("/api/login", async (req, res) => {
     await user.save();
   }
 
-  const token = jwt.sign({ email: user.email, role: user.role }, SECRET, {
-    expiresIn: rememberMe ? "7d" : "2h",
-  });
+  const token = jwt.sign(
+    { email: user.email, role: user.role },
+    SECRET,
+    { expiresIn: rememberMe ? "7d" : "2h" }
+  );
 
   res.json({
     token,
     user: { email: user.email, fullname: user.fullname, role: user.role },
   });
 });
+
 
 // ---------- SIGNUP ----------
 app.post("/api/signup", async (req, res) => {
