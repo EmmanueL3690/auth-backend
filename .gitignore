@@ -1,1 +1,9 @@
-.vercel
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs and temp files
+*.log
+.DS_Store
