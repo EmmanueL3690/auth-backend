@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import compression from "compression";
-import cookieParser from "cookie-parser"; // <-- REQUIRED for refresh tokens
+import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.js";
 
 dotenv.config();
@@ -14,30 +14,24 @@ const app = express();
 /* =============================
    SECURITY & MIDDLEWARE
 ============================= */
-
-// Secure HTTP headers
 app.use(helmet());
 
-// CORS (restrict to frontend domain)
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: [
+    "https://sacred-geomancy-solutions-icfvpfufr.vercel.app", // ✅ your production frontend
+    "http://localhost:5173" // ✅ for local testing
+  ],
   methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true, // allow cookies
+  credentials: true,
 }));
 
-// Body parser
 app.use(express.json({ limit: "10kb" }));
-
-// Cookie parser (for refreshToken in cookies)
 app.use(cookieParser());
-
-// Compression (gzip responses)
 app.use(compression());
 
-// Global rate limiter (all routes)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 mins
-  max: 100, // max requests per IP
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { message: "Too many requests from this IP, try again later." },
 });
 app.use(limiter);
@@ -73,7 +67,7 @@ app.use((err, req, res, next) => {
 /* =============================
    START SERVER
 ============================= */
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+  console.log(`🚀 Server running on port ${PORT}`)
 );
