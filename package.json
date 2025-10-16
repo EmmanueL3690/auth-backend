@@ -5,11 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "build": "echo 'Skipping build step'",
-    "postinstall": "npm install"
+    "build": "echo 'Skipping build step'"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
