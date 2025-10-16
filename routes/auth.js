@@ -26,7 +26,7 @@ const loginLimiter = rateLimit({
 /* =============================
    HELPERS
 ============================= */
-const generateOTP = () => String(crypto.randomInt(100000, 999999)); // always 6 digits
+const generateOTP = () => String(crypto.randomInt(100000, 999999)); // 6 digits only
 
 const strongPassword =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
@@ -43,10 +43,10 @@ const generateRefreshToken = (userId) =>
 router.post("/signup", signupLimiter, async (req, res) => {
   try {
     let { fullname, email, password } = req.body;
-    email = email.toLowerCase().trim();
-
     if (!fullname || !email || !password)
       return res.status(400).json({ status: "error", message: "All fields are required" });
+
+    email = email.toLowerCase().trim();
 
     if (!strongPassword.test(password)) {
       return res.status(400).json({
@@ -62,7 +62,6 @@ router.post("/signup", signupLimiter, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const otp = generateOTP();
-    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     const newUser = new User({
       fullname,
@@ -70,7 +69,7 @@ router.post("/signup", signupLimiter, async (req, res) => {
       password: hashedPassword,
       isVerified: false,
       verificationCode: otp,
-      verificationCodeExpires: otpExpiry,
+      verificationCodeExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
     });
 
     await newUser.save();
@@ -80,15 +79,16 @@ router.post("/signup", signupLimiter, async (req, res) => {
       "Verify Your Account",
       `<p>Hello ${fullname},</p>
        <p>Your verification code is: <b>${otp}</b></p>
-       <p>This code will expire in 10 minutes.</p>`
+       <p>This code expires in 10 minutes.</p>`
     );
 
     res.status(201).json({
       status: "success",
-      message: "Signup successful. Please check your email for the verification code.",
-      email, // Return for frontend to redirect to verify page
+      message: "Signup successful. Check your email for the verification code.",
+      email,
     });
   } catch (err) {
+    console.error("Signup error:", err);
     res.status(500).json({ status: "error", message: "Server error", error: err.message });
   }
 });
@@ -103,7 +103,8 @@ router.post("/verify-email", async (req, res) => {
     code = String(code).trim();
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ status: "error", message: "User not found" });
+    if (!user)
+      return res.status(400).json({ status: "error", message: "User not found" });
 
     if (user.isVerified)
       return res.status(400).json({ status: "error", message: "Account already verified" });
@@ -112,10 +113,7 @@ router.post("/verify-email", async (req, res) => {
       return res.status(400).json({ status: "error", message: "Invalid verification code" });
 
     if (user.verificationCodeExpires < Date.now())
-      return res.status(400).json({
-        status: "error",
-        message: "Verification code expired. Request a new one.",
-      });
+      return res.status(400).json({ status: "error", message: "Verification code expired" });
 
     user.isVerified = true;
     user.verificationCode = undefined;
@@ -124,6 +122,7 @@ router.post("/verify-email", async (req, res) => {
 
     res.json({ status: "success", message: "Account verified successfully! You can now log in." });
   } catch (err) {
+    console.error("Verify error:", err);
     res.status(500).json({ status: "error", message: "Server error", error: err.message });
   }
 });
@@ -137,7 +136,9 @@ router.post("/resend-code", async (req, res) => {
     email = email.toLowerCase().trim();
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ status: "error", message: "User not found" });
+    if (!user)
+      return res.status(400).json({ status: "error", message: "User not found" });
+
     if (user.isVerified)
       return res.status(400).json({ status: "error", message: "Account already verified" });
 
@@ -148,12 +149,15 @@ router.post("/resend-code", async (req, res) => {
 
     await sendEmail(
       email,
-      "Resend Verification Code",
-      `<p>Your new verification code is: <b>${otp}</b></p>`
+      "New Verification Code",
+      `<p>Hello ${user.fullname},</p>
+       <p>Your new verification code is: <b>${otp}</b></p>
+       <p>This code expires in 10 minutes.</p>`
     );
 
     res.json({ status: "success", message: "New verification code sent to your email." });
   } catch (err) {
+    console.error("Resend error:", err);
     res.status(500).json({ status: "error", message: "Server error", error: err.message });
   }
 });
@@ -175,10 +179,7 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(400).json({ status: "error", message: "Invalid email or password" });
 
     if (!user.isVerified)
-      return res.status(403).json({
-        status: "error",
-        message: "Please verify your email before logging in.",
-      });
+      return res.status(403).json({ status: "error", message: "Please verify your email first" });
 
     const accessToken = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
@@ -187,22 +188,23 @@ router.post("/login", loginLimiter, async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.json({
       status: "success",
       message: "Login successful",
-      user: { fullname: user.fullname, email: user.email, role: user.role },
+      user: { fullname: user.fullname, email: user.email },
       accessToken,
     });
   } catch (err) {
+    console.error("Login error:", err);
     res.status(500).json({ status: "error", message: "Server error", error: err.message });
   }
 });
 
 /* =============================
-   TOKEN REFRESH (OPTIONAL)
+   REFRESH TOKEN
 ============================= */
 router.post("/refresh-token", async (req, res) => {
   try {
@@ -215,48 +217,8 @@ router.post("/refresh-token", async (req, res) => {
 
     res.json({ status: "success", accessToken });
   } catch (err) {
+    console.error("Token refresh error:", err);
     res.status(403).json({ status: "error", message: "Invalid refresh token" });
-  }
-});
-
-/* =============================
-   EXPORT ROUTER
-============================= */
-/* =============================
-   RESEND VERIFICATION CODE
-============================= */
-router.post("/resend-code", async (req, res) => {
-  try {
-    let { email } = req.body;
-    email = email.toLowerCase().trim();
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ status: "error", message: "User not found" });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({ status: "error", message: "Account already verified." });
-    }
-
-    const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
-    const otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
-
-    user.verificationCode = otp;
-    user.verificationCodeExpires = otpExpiry;
-    await user.save();
-
-    await sendEmail(
-      email,
-      "New Verification Code",
-      `<p>Hello ${user.fullname},</p>
-       <p>Your new verification code is: <b>${otp}</b></p>
-       <p>This code will expire in 10 minutes.</p>`
-    );
-
-    res.json({ status: "success", message: "Verification code resent successfully." });
-  } catch (err) {
-    res.status(500).json({ status: "error", message: "Server error", error: err.message });
   }
 });
 

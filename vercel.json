@@ -1,9 +1,23 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.js", "use": "@vercel/node" }
+    {
+      "src": "server.js",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" }
-  ]
+    {
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    }
+  ],
+  "env": {
+    "PORT": "10000",
+    "MONGO_URI": "mongodb+srv://myUser:MyPassword903@cluster0.ecim46n.mongodb.net/authDB?retryWrites=true&w=majority&appName=Cluster0",
+    "JWT_SECRET": "SUPER_SECRET_KEY_CHANGE_THIS",
+    "EMAIL_USER": "emmanuelinnn13690@gmail.com",
+    "EMAIL_PASS": "hxzyldmiozrplnux",
+    "FRONTEND_URL": "https://sacred-geomancy-solutions-icfvpfufr.vercel.app"
+  }
 }
