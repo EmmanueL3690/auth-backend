@@ -19,10 +19,18 @@ app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(compression());
 
-// ✅ CORS configuration for both local + deployed frontend
+/* =============================
+   TRUST PROXY (Render Fix)
+============================= */
+// 👇 Important for Render — fixes X-Forwarded-For header issue
+app.set("trust proxy", 1);
+
+/* =============================
+   CORS CONFIGURATION
+============================= */
 const allowedOrigins = [
-  "https://sacred-geomancy-solutions-icfvpfufr.vercel.app", // frontend on Vercel
-  "http://localhost:5173" // local development
+  "https://sacred-geomancy-solutions-icfvpfufr.vercel.app", // your deployed frontend
+  "http://localhost:5173", // local dev
 ];
 
 app.use(
@@ -31,6 +39,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.error(`❌ Blocked by CORS: ${origin}`);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -54,7 +63,7 @@ app.use(limiter);
 ============================= */
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(() => console.log("✅ MongoDB connected successfully"))
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);
@@ -75,13 +84,13 @@ app.get("/api/health", (req, res) => {
 });
 
 /* =============================
-   ERROR HANDLER
+   GLOBAL ERROR HANDLER
 ============================= */
 app.use((err, req, res, next) => {
-  console.error("❌ Error:", err.message);
-  res.status(500).json({
-    message: "Internal Server Error",
-    error: err.message,
+  console.error("❌ Server Error:", err.message);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || "Internal Server Error",
   });
 });
 
@@ -89,7 +98,10 @@ app.use((err, req, res, next) => {
    START SERVER
 ============================= */
 const PORT = process.env.PORT || 10000;
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`✅ API base URL: https://auth-backend-1qly.onrender.com/api/auth`);
+  console.log(
+    `✅ API base URL: https://auth-backend-1qly.onrender.com/api/auth`
+  );
 });
