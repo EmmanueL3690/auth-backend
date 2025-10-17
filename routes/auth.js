@@ -93,6 +93,58 @@ router.post("/signup", signupLimiter, async (req, res) => {
   }
 });
 
+// Forgot Password
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetLink = `https://your-frontend-domain/reset-password/${resetToken}`;
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 1000 * 60 * 15; // 15 minutes
+    await user.save();
+
+    await sendEmail({
+      to: email,
+      subject: "Password Reset",
+      html: `<p>Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
+    });
+
+    res.json({ message: "Password reset email sent!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Reset Password
+router.post("/reset-password/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.json({ message: "Password reset successful!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 /* =============================
    VERIFY EMAIL
 ============================= */
