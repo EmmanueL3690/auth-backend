@@ -22,15 +22,15 @@ app.use(compression());
 /* =============================
    TRUST PROXY (Render Fix)
 ============================= */
-// 👇 Important for Render — fixes X-Forwarded-For header issue
 app.set("trust proxy", 1);
 
 /* =============================
    CORS CONFIGURATION
 ============================= */
 const allowedOrigins = [
-  "https://sacred-geomancy-solutions-icfvpfufr.vercel.app", // your deployed frontend
-  "http://localhost:5173", // local dev
+  "https://sacred-geomancy-solutions-icfvpfufr.vercel.app", // vercel preview
+  "https://www.geomancysolutions.com", // ✅ your custom domain
+  "http://localhost:5173", // local development
 ];
 
 app.use(
@@ -52,8 +52,8 @@ app.use(
    RATE LIMITER
 ============================= */
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { message: "Too many requests, try again later." },
 });
 app.use(limiter);
@@ -74,7 +74,6 @@ mongoose
 ============================= */
 app.use("/api/auth", authRoutes);
 
-// Health check route
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -101,7 +100,5 @@ const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(
-    `✅ API base URL: https://auth-backend-1qly.onrender.com/api/auth`
-  );
+  console.log(`✅ API base URL: https://auth-backend-1qly.onrender.com/api/auth`);
 });
