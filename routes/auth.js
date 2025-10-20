@@ -107,11 +107,12 @@ router.post("/forgot-password", async (req, res) => {
     user.resetPasswordExpires = Date.now() + 1000 * 60 * 15; // 15 minutes
     await user.save();
 
-    await sendEmail({
-      to: email,
-      subject: "Password Reset",
-      html: `<p>Click the link below to reset your password:</p><a href="${resetLink}">${resetLink}</a>`,
-    });
+    await sendEmail(
+    email,
+    "Password Reset",
+    `<p>Click the link below to reset your password:</p>
+    <a href="${resetLink}">${resetLink}</a>`
+  );
 
     res.json({ message: "Password reset email sent!" });
   } catch (err) {
